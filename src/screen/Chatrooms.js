@@ -11,7 +11,9 @@ import {
   TextInput,
   Keyboard,
   TouchableHighlight,
-  FlatList
+  FlatList,
+  UIManager,
+  findNodeHandle
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {BoxShadow} from 'react-native-shadow';
@@ -26,25 +28,46 @@ const DATA = [
     title: 'Coffee House',
     icon: 'music',
     gradient: 'expresso',
-    description: 'Chat room is a virtual room where a chat session takes place. Technically, a chat room is really a channel, but the term room is used to promote the chat metaphor. In a chat room, people communicate using on-screen text, typed in real-time.'
+    description: 'Chat room is a virtual room where a chat session takes place. Technically, a chat room is really a channel, but the term room is used to promote the chat metaphor. In a chat room, people communicate using on-screen text, typed in real-time.',
+    online: 20,
   },
   {
     id: '3ac68afc-c605-48d3-a4f8-fbd91aa97f63',
     title: 'Bong Crush',
     icon: 'heart',
-    gradient: 'flare'
+    gradient: 'flare',
+    online: 10,
   },
   {
     id: '58694a0f-3da1-471f-bd96-145571e29d72',
     title: 'Third Item',
     icon: 'globe',
-    gradient: 'ultraviolet'
+    gradient: 'ultraviolet',
+    online: 150,
   },
   {
     id: '58694a0f-3da1-471f-bd96-145571e29d73',
     title: 'Third Item',
     icon: 'beer',
     gradient: 'violet'
+  },
+  {
+    id: '58694a0f-3da1-471f-bd96-145571e29d74',
+    title: 'Third Item',
+    icon: 'glass',
+    gradient: 'quepal'
+  },
+  {
+    id: '58694a0f-3da1-471f-bd96-145571e29d75',
+    title: 'Third Item dfkhkjsdf hsdfd hdfds',
+    icon: 'headphones',
+    gradient: 'witching'
+  },
+  {
+    id: '58694a0f-3da1-471f-bd96-145571e29d76',
+    title: 'Third Item',
+    icon: 'music',
+    gradient: 'purelust'
   },
   {
     id: '58694a0f-3da1-471f-bd96-145571e29d74',
@@ -71,14 +94,47 @@ class Chatrooms extends React.Component {
     constructor(props) {
       super(props);
       this.state = {
-        activeTab: 0
+        activeTab: 0,
+        headerIsFull: -1
       }
       this.tabs = ['Public', 'Hot', 'New']
+      this.animatedValue = new Animated.Value(0)
     }
 
     componentDidMount = () => {
     }
     componentWillUnmount = () => {}
+
+    onFlatlistScroll = (event) => {
+      /*
+      * Animation of the header gradient including search bar on scroll
+      * Initialize headerIsFull to -1 to load default height before animation
+      */
+      if(event.contentOffset.y >= 110 && this.state.headerIsFull != 0){
+        this.setState({headerIsFull: 0})
+        Animated.timing(this.animatedValue, {
+          toValue: Config.statusBarHeight,
+          duration: 300,
+          useNativeDriver: false, 
+        }).start();
+      }
+      else if(event.contentOffset.y < 110 && this.state.headerIsFull != 1){
+        this.setState({headerIsFull: 1})
+        Animated.timing(this.animatedValue, {
+          toValue: this.initialHeaderHeight,
+          duration: 300,
+          useNativeDriver: false, 
+        }).start();
+      }
+
+    }
+
+    onLayout = (e) => {
+      if(this.state.headerIsFull == -1){
+        this.initialHeaderHeight = e.nativeEvent.layout.height
+        this.animatedValue.setValue(this.initialHeaderHeight)
+      }
+    }
 
     render() {
       var self = this
@@ -107,6 +163,7 @@ class Chatrooms extends React.Component {
         keyExtractor={item => item.id}
         numColumns={1}
         contentContainerStyle={{ justifyContent: 'center'  }}
+        onScroll={(e)=>this.onFlatlistScroll(e.nativeEvent)}
         />
       );
     }
@@ -138,7 +195,7 @@ class Chatrooms extends React.Component {
       }
 
       return (
-        <View style={styles.itemContainer}>
+        <TouchableOpacity style={styles.itemContainer}>
           <LinearGradient
             start={{x: 0.0, y: 0.9}} end={{x: 1.0, y: 0.25}}
             locations={[0.1,0.9]}
@@ -151,12 +208,11 @@ class Chatrooms extends React.Component {
           </LinearGradient>
           <View style={Style.flex1}>
             <Text numberOfLines={3} style={styles.itemDescription}>{item.description}</Text>
-            <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-              <Text>32 online</Text>
-              <Text>500 following</Text>
+            <View style={{flexDirection: 'row', justifyContent: 'flex-end'}}>
+              <Text style={styles.itemOnline}>{item.online} online</Text>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       );
     }
 
@@ -171,8 +227,13 @@ class Chatrooms extends React.Component {
     }
 
     header(){
+      let animatedCss = (this.state.headerIsFull == -1) ? {overflow: 'hidden', height: 'auto'} : {overflow: 'hidden', height: this.animatedValue}
+      
       return(
-        <View>
+        <Animated.View
+          onLayout={this.onLayout}
+          style={[animatedCss, (this.state.headerIsFull == 0)? { marginBottom: 10 } : null ]}
+        >
           <LinearGradient
             start={{x: 0.0, y: 1.0}} end={{x: 1, y: 0.0}}
             locations={[0,0.9]}
@@ -194,7 +255,7 @@ class Chatrooms extends React.Component {
               <Icon name='search' size={32} color={Theme.grey} />
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       );
     }
 }
@@ -242,6 +303,10 @@ const styles = StyleSheet.create({
   },
   itemDescription:{
     fontSize: 14, padding: 10, color: Theme.deepgrey, flex: 1
+  },
+  itemOnline: {
+    backgroundColor: Theme.pink, color: Theme.white, borderRadius: 100, marginRight: 10, marginBottom: 5,
+    paddingHorizontal: 5
   }
 });
 
